@@ -101,7 +101,8 @@ class AlgorithmSimulator(object):
                       handle_data=algo.event_manager.handle_data):
             # called every tick (minute or day).
 
-            calculate_minute_capital_changes(dt_to_use)
+            for capital_change in calculate_minute_capital_changes(dt_to_use):
+                yield capital_change
 
             self.simulation_dt = dt_to_use
             algo.on_dt_changed(dt_to_use)
@@ -149,9 +150,11 @@ class AlgorithmSimulator(object):
 
             perf_tracker = algo.perf_tracker
 
-            # process any capital changes that came overnight
-            algo.calculate_capital_changes(
-                midnight_dt, emission_rate=emission_rate, is_interday=True)
+            # process and capital changes that came overnight
+            for capital_change in algo.calculate_capital_changes(
+                    midnight_dt, emission_rate=emission_rate,
+                    is_interday=True):
+                yield capital_change
 
             # Get the positions before updating the date so that prices are
             # fetched for trading close instead of midnight
@@ -204,20 +207,22 @@ class AlgorithmSimulator(object):
                 def calculate_minute_capital_changes(dt):
                     # process any capital changes that came between the last
                     # and current minutes
-                    algo.calculate_capital_changes(
+                    return algo.calculate_capital_changes(
                         dt, emission_rate=emission_rate, is_interday=False)
             else:
                 def execute_order_cancellation_policy():
                     pass
 
                 def calculate_minute_capital_changes(dt):
-                    pass
+                    return []
 
             for dt, action in self.clock:
                 if action == BAR:
-                    every_bar(dt)
+                    for capital_change_packet in every_bar(dt):
+                        yield capital_change_packet
                 elif action == DAY_START:
-                    once_a_day(dt)
+                    for capital_change_packet in once_a_day(dt):
+                        yield capital_change_packet
                 elif action == DAY_END:
                     # End of the day.
                     if emission_rate == 'daily':
