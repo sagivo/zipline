@@ -148,7 +148,6 @@ def _downgrade_v2(op):
 
     # Execute batch op to allow column modification in SQLite
     with op.batch_alter_table('equities') as batch_op:
-
         batch_op.drop_column('auto_close_date')
 
     # Recreate indices after batch
@@ -195,7 +194,7 @@ def _downgrade_v3(op):
     )
     op.drop_table('equities')
     op.rename_table('_new_equities', 'equities')
-    # we need to make sure the indicies have the proper names after the rename
+    # we need to make sure the indices have the proper names after the rename
     op.create_index(
         'ix_equities_company_symbol',
         'equities',
@@ -206,3 +205,37 @@ def _downgrade_v3(op):
         'equities',
         ['fuzzy_symbol'],
     )
+
+
+@downgrades(4)
+def _downgrade_v4(op):
+    """
+    Downgrades assets db by dropping the `exchange` column, and then renaming
+    `exchange_full` to `exchange`.
+    """
+    op.drop_index('ix_equities_fuzzy_symbol')
+    op.drop_index('ix_equities_company_symbol')
+
+    # drop the exchange column
+    # add exchange column
+    # copy exchange_full to exchange
+    # drop exchange_full
+    with op.batch_alter_table('equities') as batch_op:
+        batch_op.drop_column('exchange')
+        batch_op.add_column(sa.Column('exchange', sa.Text))
+
+    op.execute(
+        """
+        UPDATE equities SET exchange = exchange_full
+        """,
+    )
+
+    with op.batch_alter_table('equities') as batch_op:
+        batch_op.drop_column('exchange_full')
+
+    op.create_index('ix_equities_fuzzy_symbol',
+                    table_name='equities',
+                    columns=['fuzzy_symbol'])
+    op.create_index('ix_equities_company_symbol',
+                    table_name='equities',
+                    columns=['company_symbol'])

@@ -42,6 +42,7 @@ _equities_defaults = {
     'first_traded': None,
     'auto_close_date': None,
     'exchange': None,
+    'exchange_full': None
 }
 
 # Default values for the futures DataFrame
