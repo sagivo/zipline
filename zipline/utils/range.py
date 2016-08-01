@@ -70,9 +70,26 @@ if PY2:
             return hash((type(self), self.start, self.stop, self.step))
 
         def __eq__(self, other):
+            """
+            Examples
+            --------
+            >>> range(1) == range(1)
+            True
+            >>> range(0, 5, 2) == range(0, 5, 2)
+            True
+            >>> range(5, 0, -2) == range(5, 0, -2)
+            True
+
+            >>> range(1) == range(2)
+            False
+            >>> range(0, 5, 2) == range(0, 5, 3)
+            False
+            """
             return reduce(
-                getattr(self, attr) == getattr(other, attr)
-                for attr in self.__slots__
+                op.and_, (
+                    getattr(self, attr) == getattr(other, attr)
+                    for attr in self.__slots__
+                ),
             )
 else:
     range = range
